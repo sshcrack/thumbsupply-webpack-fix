@@ -5,7 +5,7 @@ const E = require("./thumb-errors.js");
 
 class ThumbSupply {
 
-    get _defaultOptions() {
+    _defaultOptions() {
         return {
             forceCreate: false,
             size: this.ThumbSize.LARGE
@@ -59,7 +59,7 @@ class ThumbSupply {
 
     generateThumbnail(file, options) {
         return new Promise((resolve, reject) => {
-            options = Object.assign(this._defaultOptions, options || {});
+            options = Object.assign(this._defaultOptions(), options || {});
 
             const supplier = this._fetchThumbnailSupplier(file, options);
 
@@ -81,7 +81,7 @@ class ThumbSupply {
 
     lookupThumbnail(file, options) {
         return new Promise((resolve, reject) => {
-            options = Object.assign(this._defaultOptions, options || {});
+            options = Object.assign(this._defaultOptions(), options || {});
 
             fs.stat(file, (err, stats) => {
                 if (err) return reject(err);

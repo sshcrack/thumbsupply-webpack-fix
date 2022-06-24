@@ -55,7 +55,7 @@ module.exports.ThumbSize = ThumbSize
 
 const lookupThumbnail = (file, options) => {
     return new Promise((resolve, reject) => {
-        options = Object.assign(_defaultOptions(), options || {});
+        options = Object.assign(_defaultOptions, options || {});
 
         fs.stat(file, (err, stats) => {
             if (err) return reject(err);

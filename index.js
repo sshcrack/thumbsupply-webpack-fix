@@ -78,26 +78,20 @@ const lookupThumbnail = (file, options) => {
 }
 
 
-const generateThumbnail = (file, options) => {
-    return new Promise((resolve, reject) => {
-        options = Object.assign(_defaultOptions, options || {});
+const generateThumbnail = async (file, options) => {
+    options = Object.assign(_defaultOptions, options || {});
 
-        const supplier = _fetchThumbnailSupplier(file, options);
+    const supplier = _fetchThumbnailSupplier(file, options);
 
-        if (options.forceCreate) {
-            supplier.createThumbnail(file)
-                .then(resolve)
-                .catch(reject);
-        } else {
-            lookupThumbnail(file, options)
-                .then(resolve)
-                .catch(() => {
-                    supplier.createThumbnail(file)
-                        .then(resolve)
-                        .catch(reject);
-                });
-        }
-    });
+    if (options.forceCreate) {
+        if (!fs.existsSync(file))
+            throw new Error(`ENOENT: no such file or directory ${file}`)
+
+        return supplier.createThumbnail(file)
+    } else {
+        return lookupThumbnail(file, options)
+            .catch(() => supplier.createThumbnail(file));
+    }
 }
 
 module.exports.generateThumbnail = generateThumbnail

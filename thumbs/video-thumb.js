@@ -6,6 +6,17 @@ function ratioStringToParts(str) {
     return str.split(":").map(n => parseInt(n, 10));
 }
 
+const probeVideo = video => {
+    return new Promise((resolve, reject) => {
+        ffmpeg.ffprobe(video, (err, metadata) => {
+            if (err)
+                return reject(err)
+
+            resolve(metadata)
+        });
+    })
+}
+
 class VideoThumbnailSupplier extends ThumbnailSupplier {
 
     constructor(options) {
@@ -28,7 +39,7 @@ class VideoThumbnailSupplier extends ThumbnailSupplier {
                             folder: this.cacheDir
                         });
                 })
-                .catch(err => {
+                .catch(() => {
                     ffmpeg(video)
                         .on("end", () => resolve(super.getThumbnailLocation(video)))
                         .on("error", reject)
@@ -42,40 +53,37 @@ class VideoThumbnailSupplier extends ThumbnailSupplier {
         });
     }
 
-    getVideoDimension(video) {
-        return new Promise((resolve, reject) => {
-            ffmpeg.ffprobe(video, (err, metadata) => {
-                if (err) return reject(err);
+    async getVideoDimension(video) {
+        const metadata = probeVideo(video)
+        const stream = metadata.streams.find(
+            stream => stream.codec_type === "video"
+        );
 
-                const stream = metadata.streams.find(
-                    stream => stream.codec_type === "video"
-                );
+        if (!stream)
+            throw new TypeError("Stream is null")
 
-                const darString = stream.display_aspect_ratio;
+        const darString = stream.display_aspect_ratio;
 
-                // ffprobe returns aspect ratios of "0:1" or `undefined` if they're not specified.
-                // https://trac.ffmpeg.org/ticket/3798
-                if (darString && darString !== "0:1") {
-                    // The DAR is specified so use it directly
-                    const [widthRatioPart, heightRatioPart] = ratioStringToParts(darString);
-                    const inverseDar = heightRatioPart / widthRatioPart;
-                    resolve({
-                        width: stream.width,
-                        height: stream.width * inverseDar
-                    });
-                } else {
-                    // DAR not specified so assume square pixels (use sample resolution as-is).
-                    resolve({
-                        width: stream.width,
-                        height: stream.height
-                    });
-                }
-            });
-        });
+        // ffprobe returns aspect ratios of "0:1" or `undefined` if they're not specified.
+        // https://trac.ffmpeg.org/ticket/3798
+        if (darString && darString !== "0:1") {
+            // The DAR is specified so use it directly
+            const [widthRatioPart, heightRatioPart] = ratioStringToParts(darString);
+            const inverseDar = heightRatioPart / widthRatioPart;
+            return {
+                width: stream.width,
+                height: stream.width * inverseDar
+            };
+        }
+        // DAR not specified so assume square pixels (use sample resolution as-is).
+        return {
+            width: stream.width,
+            height: stream.height
+        };
     }
 
     getOptimalThumbnailResolution(videoDimension) {
-        if(videoDimension.width > videoDimension.height) {
+        if (videoDimension.width > videoDimension.height) {
             return {
                 width: this.size.width,
                 height: Math.round(this.size.width * videoDimension.height / videoDimension.width)

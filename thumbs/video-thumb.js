@@ -54,7 +54,7 @@ class VideoThumbnailSupplier extends ThumbnailSupplier {
     }
 
     async getVideoDimension(video) {
-        const metadata = probeVideo(video)
+        const metadata = await probeVideo(video)
         const stream = metadata.streams.find(
             stream => stream.codec_type === "video"
         );
@@ -66,7 +66,7 @@ class VideoThumbnailSupplier extends ThumbnailSupplier {
 
         // ffprobe returns aspect ratios of "0:1" or `undefined` if they're not specified.
         // https://trac.ffmpeg.org/ticket/3798
-        if (darString && darString !== "0:1") {
+        if (darString && darString !== "0:1" && darString !== "N/A") {
             // The DAR is specified so use it directly
             const [widthRatioPart, heightRatioPart] = ratioStringToParts(darString);
             const inverseDar = heightRatioPart / widthRatioPart;
